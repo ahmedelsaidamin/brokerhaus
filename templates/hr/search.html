@@ -1,0 +1,360 @@
+{% extends "base.html" %}
+{% block title %}Search candidates — Brokerhaus{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="page-head">
+    <div class="page-eyebrow" data-en="Candidate search" data-ar="بحث المرشحين">Candidate search</div>
+    <h1 class="page-title"
+        data-en-html='Find candidates by <em>what they do</em>.'
+        data-ar-html='ابحث بـ <em>الشغل الفعلي</em>.'>
+      Find candidates by <em>what they do</em>.
+    </h1>
+    <p class="page-sub" data-en="Pick a department, check required functions, set seniority and experience. Only available candidates appear in results." data-ar="اختار إدارة، حدّد المهام المطلوبة، حدّد الدرجة والخبرة. بس المرشحين المتاحين هيظهروا.">
+      Pick a department, check required functions, set seniority and experience. Only available candidates appear in results.
+    </p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:380px 1fr;gap:32px;align-items:start;">
+
+    <!-- Search panel -->
+    <aside class="card" style="position:sticky;top:90px;">
+
+      <div class="form-row">
+        <label class="form-label-mono" data-en="Department" data-ar="الإدارة">Department</label>
+        <select class="form-select" id="search-dept">
+          <option value="">— Any —</option>
+          {% for dept in departments %}
+          <option value="{{ dept.id }}">{{ dept.name_en }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label-mono" data-en="Required functions" data-ar="المهام المطلوبة">Required functions</label>
+        <div class="form-help" data-en="Pick a department above to load its functions." data-ar="اختار إدارة فوق عشان تظهر المهام.">Pick a department above to load its functions.</div>
+        <div id="search-functions" style="max-height:280px;overflow-y:auto;background:var(--bg);border:1px solid var(--border-strong);border-radius:6px;padding:10px;">
+          <div class="empty" style="padding:20px;font-size:12px;" data-en="Select a department first" data-ar="اختار إدارة الأول">Select a department first</div>
+        </div>
+        <div style="margin-top:8px;font-size:12px;color:var(--text-dim);">
+          <span id="fn-count">0</span>
+          <span data-en=" functions selected" data-ar=" مهمة محددة"> functions selected</span>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label-mono" data-en="Seniority levels" data-ar="الدرجات الوظيفية">Seniority levels</label>
+        <div id="search-seniority" style="background:var(--bg);border:1px solid var(--border-strong);border-radius:6px;padding:10px;max-height:200px;overflow-y:auto;">
+          {% for level in seniority_levels %}
+          <label style="display:flex;align-items:center;gap:8px;padding:5px 4px;cursor:pointer;font-size:13px;">
+            <input type="checkbox" class="sen-cb" value="{{ level }}" style="accent-color:var(--accent);">
+            {{ level }}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-row">
+        <label class="form-label-mono" data-en="Years of experience" data-ar="سنوات الخبرة">Years of experience</label>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div>
+            <input class="form-input" type="number" id="min-years" min="0" max="50" value="0" placeholder="Min">
+            <div class="text-xs text-dim mt-2" data-en="Min years" data-ar="أقل">Min years</div>
+          </div>
+          <div>
+            <input class="form-input" type="number" id="max-years" min="0" max="50" value="50" placeholder="Max">
+            <div class="text-xs text-dim mt-2" data-en="Max years" data-ar="أكتر">Max years</div>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%;padding:14px;" onclick="runSearch()" id="search-btn">
+        <span data-en="Search candidates" data-ar="ابحث">Search candidates</span>
+      </button>
+
+      <button class="btn btn-ghost mt-4" style="width:100%;" onclick="resetSearch()">
+        <span data-en="Reset filters" data-ar="مسح الفلاتر">Reset filters</span>
+      </button>
+    </aside>
+
+    <!-- Results -->
+    <div>
+      <div class="flex-between mb-4">
+        <h2 style="font-family:var(--display);font-size:24px;font-weight:500;letter-spacing:-0.02em;">
+          <span id="results-title" data-en="Run a search to see candidates" data-ar="اعمل بحث لرؤية المرشحين">Run a search to see candidates</span>
+        </h2>
+        <div class="flex gap-3">
+          <span class="text-sm text-dim" id="selected-count-display">0 selected</span>
+          <button class="btn btn-primary hidden" id="nominate-btn" onclick="openNominateModal()">
+            <span data-en="Nominate selected →" data-ar="رشّح المختارين ←">Nominate selected →</span>
+          </button>
+        </div>
+      </div>
+
+      <div id="results-container">
+        <div class="empty">
+          <div class="empty-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          </div>
+          <div class="empty-title" data-en="Configure your search" data-ar="اضبط البحث">Configure your search</div>
+          <div class="text-dim" data-en="Choose a department, tick required functions, and click search." data-ar="اختار إدارة، حدّد المهام المطلوبة، واضغط ابحث.">
+            Choose a department, tick required functions, and click search.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Nominate modal -->
+<div id="nominate-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:200;backdrop-filter:blur(6px);">
+  <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--bg-elev);border:1px solid var(--border-strong);border-radius:10px;padding:32px;max-width:560px;width:90%;max-height:90vh;overflow-y:auto;">
+    <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;margin-bottom:8px;">
+      <span data-en="Send nomination" data-ar="إرسال ترشيح">Send nomination</span>
+    </div>
+    <h3 style="font-family:var(--display);font-size:28px;font-weight:500;letter-spacing:-0.02em;margin-bottom:8px;">
+      <span data-en="Nominate " data-ar="ترشيح ">Nominate </span><span id="nom-count" class="text-accent">0</span><span data-en=" candidate(s)" data-ar=" مرشح"> candidate(s)</span>
+    </h3>
+    <p class="text-sm text-dim mb-6" data-en="Each candidate will see this and can accept or decline. Their identity is revealed only on acceptance. Nominations expire after 30 days." data-ar="كل مرشح هيشوف ده ويوافق أو يرفض. هويته بتظهر بس عند الموافقة. الترشيح ينتهي بعد 30 يوم.">
+      Each candidate will see this and can accept or decline. Their identity is revealed only on acceptance. Nominations expire after 30 days.
+    </p>
+
+    <div class="form-row">
+      <label class="form-label-mono" data-en="Role summary" data-ar="ملخص الوظيفة">Role summary</label>
+      <textarea class="form-textarea" id="role-summary" rows="4" placeholder="e.g. Senior Back Office Officer · Settlements team · Cairo HQ"></textarea>
+    </div>
+
+    <div id="nom-error" class="alert alert-danger hidden"></div>
+
+    <div class="flex gap-3" style="justify-content:flex-end;">
+      <button class="btn btn-ghost" onclick="closeNominateModal()" data-en="Cancel" data-ar="إلغاء">Cancel</button>
+      <button class="btn btn-primary" onclick="sendNominations()" id="send-nom-btn" data-en="Send nominations →" data-ar="إرسال الترشيحات ←">Send nominations →</button>
+    </div>
+  </div>
+</div>
+
+<style>
+@media (max-width: 1000px) {
+  .container > div[style*="grid-template-columns: 380px 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  aside.card { position: static !important; }
+}
+</style>
+
+<script>
+const allDepts = {{ departments | tojson }};
+let lastResults = [];
+let selectedFunctions = new Set();
+let selectedCandidates = new Set();
+let lastCriteria = {};
+
+async function loadFunctionsForDept(deptId) {
+  const container = document.getElementById('search-functions');
+  if (!deptId) {
+    container.innerHTML = '<div class="empty" style="padding:20px;font-size:12px;" data-en="Select a department first" data-ar="اختار إدارة الأول">Select a department first</div>';
+    selectedFunctions.clear();
+    document.getElementById('fn-count').textContent = 0;
+    return;
+  }
+  const dept = allDepts.find(d => d.id === deptId);
+  if (!dept) return;
+  selectedFunctions.clear();
+  container.innerHTML = dept.functions.map(fn => `
+    <div class="check-item" onclick="toggleSearchFn(this)" data-fn="${fn.replace(/"/g, '&quot;')}" style="margin-bottom:6px;padding:8px 10px;font-size:12px;">
+      <div class="check-box" style="width:14px;height:14px;"></div>
+      <div>${fn}</div>
+    </div>
+  `).join('');
+  document.getElementById('fn-count').textContent = 0;
+}
+
+function toggleSearchFn(el) {
+  const fn = el.dataset.fn;
+  if (selectedFunctions.has(fn)) {
+    selectedFunctions.delete(fn);
+    el.classList.remove('checked');
+  } else {
+    selectedFunctions.add(fn);
+    el.classList.add('checked');
+  }
+  document.getElementById('fn-count').textContent = selectedFunctions.size;
+}
+
+document.getElementById('search-dept').addEventListener('change', e => {
+  loadFunctionsForDept(e.target.value);
+});
+
+function resetSearch() {
+  document.getElementById('search-dept').value = '';
+  document.getElementById('min-years').value = 0;
+  document.getElementById('max-years').value = 50;
+  document.querySelectorAll('.sen-cb').forEach(c => c.checked = false);
+  selectedFunctions.clear();
+  loadFunctionsForDept('');
+}
+
+async function runSearch() {
+  const btn = document.getElementById('search-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loader"></span>';
+
+  const criteria = {
+    department: document.getElementById('search-dept').value || null,
+    functions: Array.from(selectedFunctions),
+    seniority_levels: Array.from(document.querySelectorAll('.sen-cb:checked')).map(c => c.value),
+    min_years: parseInt(document.getElementById('min-years').value || 0),
+    max_years: parseInt(document.getElementById('max-years').value || 50),
+    function_years: {},
+  };
+  lastCriteria = criteria;
+
+  const r = await api('/api/search', { method: 'POST', body: criteria });
+  btn.disabled = false;
+  btn.innerHTML = '<span data-en="Search candidates" data-ar="ابحث">Search candidates</span>';
+  if (window.setLanguage && document.documentElement.lang === 'ar') {
+    btn.querySelector('span').textContent = 'ابحث';
+  }
+
+  if (!r.ok) {
+    toast('Search failed', 'error');
+    return;
+  }
+  lastResults = r.data.results || [];
+  selectedCandidates.clear();
+  renderResults();
+}
+
+function renderResults() {
+  const container = document.getElementById('results-container');
+  const title = document.getElementById('results-title');
+
+  if (lastResults.length === 0) {
+    title.textContent = 'No matches found';
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/></svg>
+        </div>
+        <div class="empty-title">No candidates match</div>
+        <div class="text-dim">Try loosening the filters — fewer required functions, wider experience range, or more seniority levels.</div>
+      </div>`;
+    return;
+  }
+
+  title.textContent = lastResults.length + ' candidate(s) found';
+
+  const rows = lastResults.map(c => `
+    <tr class="selectable" onclick="toggleRow(${c.candidate_id})" data-cid="${c.candidate_id}">
+      <td><input type="checkbox" class="row-cb" data-cid="${c.candidate_id}" style="accent-color:var(--accent);" onclick="event.stopPropagation();toggleRow(${c.candidate_id});"></td>
+      <td class="code">${c.code}</td>
+      <td>${escapeHtml(c.department || '—')}</td>
+      <td class="text-sm">${escapeHtml(c.seniority || '—')}</td>
+      <td class="code">${c.years_total || 0}y</td>
+      <td class="text-sm text-dim">${escapeHtml(c.functions_summary || '—')}</td>
+      <td>
+        <div class="score-cell">
+          <div class="score-bar"><div class="score-fill" style="width:${c.score}%;"></div></div>
+          <div class="score-num">${Math.round(c.score)}</div>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+
+  container.innerHTML = `
+    <table class="table">
+      <thead>
+        <tr>
+          <th style="width:32px;"></th>
+          <th>Code</th>
+          <th>Department</th>
+          <th>Seniority</th>
+          <th>Exp.</th>
+          <th>Functions</th>
+          <th>Match</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="text-xs text-dim mt-4" style="padding:14px 16px;background:var(--bg);border-radius:6px;border:1px dashed var(--border-strong);">
+      <strong style="color:var(--accent);">Privacy:</strong>
+      Only candidate codes shown. Names, contact info, and current company are revealed only after a candidate accepts your nomination.
+    </div>
+  `;
+  updateSelectionUI();
+}
+
+function toggleRow(cid) {
+  if (selectedCandidates.has(cid)) {
+    selectedCandidates.delete(cid);
+  } else {
+    selectedCandidates.add(cid);
+  }
+  updateSelectionUI();
+}
+
+function updateSelectionUI() {
+  document.querySelectorAll('tr[data-cid]').forEach(tr => {
+    const cid = parseInt(tr.dataset.cid);
+    const sel = selectedCandidates.has(cid);
+    tr.classList.toggle('row-selected', sel);
+    const cb = tr.querySelector('.row-cb');
+    if (cb) cb.checked = sel;
+  });
+  const n = selectedCandidates.size;
+  document.getElementById('selected-count-display').textContent = n + ' selected';
+  document.getElementById('nominate-btn').classList.toggle('hidden', n === 0);
+}
+
+function openNominateModal() {
+  document.getElementById('nom-count').textContent = selectedCandidates.size;
+  document.getElementById('nominate-modal').style.display = 'block';
+  document.getElementById('nom-error').classList.add('hidden');
+}
+
+function closeNominateModal() {
+  document.getElementById('nominate-modal').style.display = 'none';
+}
+
+async function sendNominations() {
+  const btn = document.getElementById('send-nom-btn');
+  const errBox = document.getElementById('nom-error');
+  const roleSummary = document.getElementById('role-summary').value.trim();
+
+  if (!roleSummary) {
+    errBox.textContent = 'Please add a short role summary.';
+    errBox.classList.remove('hidden');
+    return;
+  }
+
+  btn.disabled = true;
+  const r = await api('/api/nominate', {
+    method: 'POST',
+    body: {
+      candidate_ids: Array.from(selectedCandidates),
+      criteria: lastCriteria,
+      role_summary: roleSummary,
+    },
+  });
+
+  if (r.ok && r.data && r.data.ok) {
+    closeNominateModal();
+    toast(`${r.data.sent} nomination(s) sent successfully`, 'success');
+    selectedCandidates.clear();
+    updateSelectionUI();
+    document.getElementById('role-summary').value = '';
+  } else {
+    errBox.textContent = 'Failed to send nominations';
+    errBox.classList.remove('hidden');
+    btn.disabled = false;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+</script>
+
+{% endblock %}

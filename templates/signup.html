@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Sign up — Brokerhaus{% endblock %}
+
+{% block content %}
+<div class="container-narrow" style="max-width:560px;">
+
+  <div class="page-head" style="text-align:center;">
+    <div class="page-eyebrow" data-en="Create your account" data-ar="إنشاء حسابك">Create your account</div>
+    <h1 class="page-title"
+        data-en-html='Join <em>Brokerhaus</em>.'
+        data-ar-html='انضم لـ <em>Brokerhaus</em>.'>
+      Join <em>Brokerhaus</em>.
+    </h1>
+  </div>
+
+  <div class="card">
+
+    <div class="form-row">
+      <label class="form-label-mono" data-en="I am a..." data-ar="أنا...">I am a...</label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+        <div class="role-option {% if role == 'candidate' %}selected{% endif %}" data-role="candidate" onclick="selectRole('candidate')">
+          <div style="font-family:var(--display);font-size:16px;font-weight:500;margin-bottom:4px;" data-en="Candidate" data-ar="موظّف">Candidate</div>
+          <div style="font-size:12px;color:var(--text-dim);" data-en="I work in brokerage" data-ar="بشتغل في السمسرة">I work in brokerage</div>
+        </div>
+        <div class="role-option {% if role == 'hr' %}selected{% endif %}" data-role="hr" onclick="selectRole('hr')">
+          <div style="font-family:var(--display);font-size:16px;font-weight:500;margin-bottom:4px;" data-en="Brokerage firm" data-ar="شركة سمسرة">Brokerage firm</div>
+          <div style="font-size:12px;color:var(--text-dim);" data-en="I'm hiring" data-ar="بدوّر على موظّفين">I'm hiring</div>
+        </div>
+      </div>
+    </div>
+
+    <form id="signup-form" onsubmit="return submitSignup(event)">
+      <input type="hidden" name="role" id="role-input" value="{{ role }}">
+
+      <div class="form-row">
+        <label class="form-label-mono" data-en="Full name" data-ar="الاسم الكامل">Full name</label>
+        <input class="form-input" type="text" name="full_name" required maxlength="100" placeholder="Ahmed Hassan">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label-mono" data-en="Work email" data-ar="إيميل الشغل">Work email</label>
+        <input class="form-input" type="email" name="email" required placeholder="name@company.com">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label-mono" data-en="Phone (optional)" data-ar="التليفون (اختياري)">Phone (optional)</label>
+        <input class="form-input" type="tel" name="phone" placeholder="+20 ...">
+      </div>
+
+      <div class="form-row hr-only" style="display:none;">
+        <label class="form-label-mono" data-en="Company name" data-ar="اسم الشركة">Company name</label>
+        <input class="form-input" type="text" name="company_name" placeholder="e.g. Pharos Securities Brokerage">
+      </div>
+
+      <div class="form-row">
+        <label class="form-label-mono" data-en="Password" data-ar="كلمة السر">Password</label>
+        <input class="form-input" type="password" name="password" required minlength="8" placeholder="At least 8 characters">
+      </div>
+
+      <div id="signup-error" class="alert alert-danger hidden"></div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;padding:14px;" id="submit-btn">
+        <span data-en="Create account →" data-ar="إنشاء الحساب ←">Create account →</span>
+      </button>
+
+      <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-dim);">
+        <span data-en="Already have an account?" data-ar="عندك حساب بالفعل؟">Already have an account?</span>
+        <a href="{{ url_for('login_page') }}" style="color:var(--accent);text-decoration:none;margin-left:6px;" data-en="Sign in" data-ar="سجّل دخول">Sign in</a>
+      </p>
+    </form>
+
+    <div style="margin-top:24px;padding:14px 16px;background:var(--bg);border:1px dashed var(--border-strong);border-radius:6px;font-size:12px;color:var(--text-dim);line-height:1.6;">
+      <strong style="color:var(--accent);" data-en="Your privacy:" data-ar="خصوصيتك:">Your privacy:</strong>
+      <span data-en="Your data is private until you choose to be considered for a job. We never sell or share your information." data-ar="بياناتك خاصة لحد ما توافق على ترشيح. ما بنبيعش أو نشارك معلوماتك أبداً.">Your data is private until you choose to be considered for a job. We never sell or share your information.</span>
+    </div>
+  </div>
+</div>
+
+<style>
+.role-option {
+  padding: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+  background: var(--bg);
+}
+.role-option:hover { border-color: var(--text-dim); }
+.role-option.selected {
+  border-color: var(--accent);
+  background: rgba(212, 255, 58, 0.08);
+}
+</style>
+
+<script>
+function selectRole(role) {
+  document.querySelectorAll('.role-option').forEach(o => {
+    o.classList.toggle('selected', o.dataset.role === role);
+  });
+  document.getElementById('role-input').value = role;
+  document.querySelector('.hr-only').style.display = role === 'hr' ? 'block' : 'none';
+  document.querySelector('[name="company_name"]').required = role === 'hr';
+}
+
+// Set initial state
+selectRole(document.getElementById('role-input').value || 'candidate');
+
+async function submitSignup(e) {
+  e.preventDefault();
+  const form = document.getElementById('signup-form');
+  const btn = document.getElementById('submit-btn');
+  const errBox = document.getElementById('signup-error');
+
+  btn.disabled = true;
+  errBox.classList.add('hidden');
+
+  const data = Object.fromEntries(new FormData(form));
+  const r = await api('/api/signup', { method: 'POST', body: data });
+
+  if (r.ok && r.data && r.data.ok) {
+    window.location.href = r.data.redirect;
+    return false;
+  }
+
+  const errMap = {
+    invalid_email: 'Please enter a valid email.',
+    weak_password: 'Password must be at least 8 characters.',
+    missing_name: 'Please enter your full name.',
+    missing_company: 'Please enter your company name.',
+    email_taken: 'An account with this email already exists.',
+    invalid_role: 'Please choose Candidate or Brokerage firm.',
+  };
+  errBox.textContent = errMap[r.data && r.data.error] || 'Something went wrong. Please try again.';
+  errBox.classList.remove('hidden');
+  btn.disabled = false;
+  return false;
+}
+</script>
+
+{% endblock %}

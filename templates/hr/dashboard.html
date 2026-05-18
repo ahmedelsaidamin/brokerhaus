@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}HR dashboard — Brokerhaus{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="page-head">
+    <div class="page-eyebrow" data-en="HR dashboard" data-ar="لوحة HR">HR dashboard</div>
+    <h1 class="page-title"
+        data-en-html='Welcome, <em>{{ firm.company_name }}</em>.'
+        data-ar-html='أهلاً، <em>{{ firm.company_name }}</em>.'>
+      Welcome, <em>{{ firm.company_name }}</em>.
+    </h1>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-cell">
+      <div class="stat-num">{{ stats.total_sent }}</div>
+      <div class="stat-label" data-en="Nominations sent" data-ar="ترشيحات مرسلة">Nominations sent</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num text-accent">{{ stats.accepted }}</div>
+      <div class="stat-label" data-en="Accepted" data-ar="مقبولة">Accepted</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">{{ stats.pending }}</div>
+      <div class="stat-label" data-en="Pending" data-ar="في الانتظار">Pending</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num text-dim">{{ stats.declined }}</div>
+      <div class="stat-label" data-en="Declined" data-ar="مرفوضة">Declined</div>
+    </div>
+  </div>
+
+  <div class="flex gap-3 mb-6" style="justify-content:flex-end;">
+    <a href="{{ url_for('hr_nominations_page') }}" class="btn btn-ghost" data-en="View all nominations" data-ar="كل الترشيحات">View all nominations</a>
+    <a href="{{ url_for('hr_search_page') }}" class="btn btn-primary" data-en="New candidate search →" data-ar="بحث جديد ←">New candidate search →</a>
+  </div>
+
+  <h2 style="font-family:var(--display);font-size:28px;font-weight:500;letter-spacing:-0.02em;margin-bottom:18px;" data-en="Recent nominations" data-ar="آخر الترشيحات">Recent nominations</h2>
+
+  {% if recent %}
+  <table class="table">
+    <thead>
+      <tr>
+        <th data-en="Candidate" data-ar="المرشح">Candidate</th>
+        <th data-en="Department" data-ar="الإدارة">Department</th>
+        <th data-en="Seniority" data-ar="الدرجة">Seniority</th>
+        <th data-en="Experience" data-ar="الخبرة">Experience</th>
+        <th data-en="Match" data-ar="المطابقة">Match</th>
+        <th data-en="Sent" data-ar="أُرسل">Sent</th>
+        <th data-en="Status" data-ar="الحالة">Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for nom in recent %}
+      <tr>
+        <td class="code">{{ nom.code }}</td>
+        <td>{{ nom.primary_department }}</td>
+        <td class="text-sm">{{ nom.seniority }}</td>
+        <td class="code">{{ nom.years_total }}y</td>
+        <td>
+          {% if nom.match_score %}
+          <div class="score-cell">
+            <div class="score-bar"><div class="score-fill" style="width:{{ nom.match_score }}%;"></div></div>
+            <div class="score-num">{{ nom.match_score | int }}</div>
+          </div>
+          {% else %}—{% endif %}
+        </td>
+        <td class="text-mono text-sm text-dim">{{ nom.created_at[:10] }}</td>
+        <td>
+          {% if nom.status == 'sent' %}
+          <span class="badge badge-accent">● Pending</span>
+          {% elif nom.status == 'accepted' %}
+          <span class="badge badge-green">✓ Accepted</span>
+          {% elif nom.status == 'declined' %}
+          <span class="badge badge-neutral">Declined</span>
+          {% else %}
+          <span class="badge badge-neutral">Expired</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    </div>
+    <div class="empty-title" data-en="No nominations yet" data-ar="مفيش ترشيحات لسه">No nominations yet</div>
+    <div class="text-dim" data-en="Start searching for candidates who match the roles you're hiring for." data-ar="ابدأ تدوّر على مرشحين يطابقوا الوظائف اللي بتوظّف لها.">
+      Start searching for candidates who match the roles you're hiring for.
+    </div>
+    <a href="{{ url_for('hr_search_page') }}" class="btn btn-primary mt-4" style="margin-top:24px;" data-en="Start searching →" data-ar="ابدأ البحث ←">Start searching →</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

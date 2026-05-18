@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Nominations — Brokerhaus{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="page-head">
+    <div class="page-eyebrow" data-en="Nominations sent" data-ar="الترشيحات المرسلة">Nominations sent</div>
+    <h1 class="page-title"
+        data-en-html='Your <em>nominations</em>.'
+        data-ar-html='ترشيحاتك <em>المرسلة</em>.'>
+      Your <em>nominations</em>.
+    </h1>
+    <p class="page-sub" data-en="Contact details are revealed only for accepted nominations." data-ar="بيانات التواصل بتظهر بس للترشيحات المقبولة.">
+      Contact details are revealed only for accepted nominations.
+    </p>
+  </div>
+
+  {% if nominations %}
+  <div style="display:grid;gap:14px;">
+    {% for nom in nominations %}
+    <div class="card card-tight" data-status="{{ nom.status }}">
+      <div class="flex-between mb-4" style="flex-wrap:wrap;gap:12px;">
+        <div class="flex gap-3" style="align-items:center;flex-wrap:wrap;">
+          <span class="code text-accent">{{ nom.code }}</span>
+          <span class="text-dim">·</span>
+          <span class="text-sm">{{ nom.primary_department }}</span>
+          <span class="text-dim">·</span>
+          <span class="text-sm">{{ nom.seniority }}</span>
+          <span class="text-dim">·</span>
+          <span class="code text-sm">{{ nom.years_total }}y</span>
+        </div>
+        <div>
+          {% if nom.status == 'sent' %}
+          <span class="badge badge-accent">● Pending response</span>
+          {% elif nom.status == 'accepted' %}
+          <span class="badge badge-green">✓ Accepted</span>
+          {% elif nom.status == 'declined' %}
+          <span class="badge badge-neutral">Declined</span>
+          {% else %}
+          <span class="badge badge-neutral">Expired</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div style="font-family:var(--display);font-size:17px;font-weight:500;margin-bottom:10px;">{{ nom.role_summary or '—' }}</div>
+
+      {% if nom.work_description %}
+      <div class="text-sm text-dim mb-4" style="line-height:1.7;border-left:2px solid var(--border-strong);padding-left:14px;">
+        {{ nom.work_description[:240] }}{% if nom.work_description|length > 240 %}…{% endif %}
+      </div>
+      {% endif %}
+
+      <!-- REVEALED CONTACT INFO (only if accepted) -->
+      {% if nom.status == 'accepted' and nom.revealed_name %}
+      <div style="margin-top:14px;padding:16px 18px;background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.3);border-radius:6px;">
+        <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.2em;color:var(--green);text-transform:uppercase;margin-bottom:10px;">
+          <span data-en="Candidate accepted — contact details" data-ar="المرشح وافق — بيانات التواصل">Candidate accepted — contact details</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:14px;">
+          <div>
+            <div class="text-xs text-dim mb-2" data-en="Name" data-ar="الاسم">Name</div>
+            <div style="font-weight:500;">{{ nom.revealed_name }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-dim mb-2" data-en="Job title" data-ar="المسمى الوظيفي">Job title</div>
+            <div style="font-weight:500;">{{ nom.revealed_title or '—' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-dim mb-2" data-en="Current company" data-ar="الشركة الحالية">Current company</div>
+            <div style="font-weight:500;">{{ nom.revealed_company or '—' }}</div>
+          </div>
+          <div>
+            <div class="text-xs text-dim mb-2" data-en="Email" data-ar="الإيميل">Email</div>
+            <a href="mailto:{{ nom.revealed_email }}" style="font-weight:500;color:var(--accent);text-decoration:none;">{{ nom.revealed_email }}</a>
+          </div>
+          {% if nom.revealed_phone %}
+          <div>
+            <div class="text-xs text-dim mb-2" data-en="Phone" data-ar="التليفون">Phone</div>
+            <a href="tel:{{ nom.revealed_phone }}" style="font-weight:500;color:var(--accent);text-decoration:none;">{{ nom.revealed_phone }}</a>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="flex gap-3 mt-4" style="font-size:12px;color:var(--text-mute);font-family:var(--mono);text-transform:uppercase;letter-spacing:0.1em;">
+        <span><span data-en="Sent: " data-ar="أُرسل: ">Sent: </span>{{ nom.created_at[:10] }}</span>
+        {% if nom.responded_at %}
+        <span>·</span>
+        <span><span data-en="Responded: " data-ar="الرد: ">Responded: </span>{{ nom.responded_at[:10] }}</span>
+        {% elif nom.status == 'sent' and nom.expires_at %}
+        <span>·</span>
+        <span><span data-en="Expires: " data-ar="ينتهي: ">Expires: </span>{{ nom.expires_at[:10] }}</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12c2-6 7-9 9-9s7 3 9 9-7 9-9 9-7-3-9-9z"/><circle cx="12" cy="12" r="3"/></svg>
+    </div>
+    <div class="empty-title" data-en="No nominations yet" data-ar="مفيش ترشيحات لسه">No nominations yet</div>
+    <div class="text-dim mb-4" data-en="Start a candidate search to find and nominate professionals." data-ar="ابدأ بحث عشان تلاقي وترشّح موظفين.">
+      Start a candidate search to find and nominate professionals.
+    </div>
+    <a href="{{ url_for('hr_search_page') }}" class="btn btn-primary mt-4" data-en="Start a search →" data-ar="ابدأ بحث ←">Start a search →</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
