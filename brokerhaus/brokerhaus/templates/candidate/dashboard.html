@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Brokerhaus{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="page-head flex-between" style="gap:24px;flex-wrap:wrap;">
+    <div>
+      <div class="page-eyebrow">
+        <span class="code">{{ candidate.code }}</span>
+        <span style="margin:0 10px;">·</span>
+        <span data-en="Candidate dashboard" data-ar="لوحة الموظف">Candidate dashboard</span>
+      </div>
+      <h1 class="page-title"
+          data-en-html='Welcome, <em>{{ current_user.full_name.split()[0] }}</em>.'
+          data-ar-html='أهلاً <em>{{ current_user.full_name.split()[0] }}</em>.'>
+        Welcome, <em>{{ current_user.full_name.split()[0] }}</em>.
+      </h1>
+    </div>
+    <div class="flex gap-3">
+      <div class="badge {% if candidate.availability == 'available' %}badge-green{% else %}badge-red{% endif %}" id="avail-badge">
+        {% if candidate.availability == 'available' %}● Available for work{% else %}● Not available{% endif %}
+      </div>
+      <button class="btn btn-ghost" onclick="toggleAvail()" id="avail-btn"
+              data-en="{% if candidate.availability == 'available' %}Mark as not available{% else %}Mark as available{% endif %}"
+              data-ar="{% if candidate.availability == 'available' %}حدد غير متاح{% else %}حدد متاح{% endif %}">
+        {% if candidate.availability == 'available' %}Mark as not available{% else %}Mark as available{% endif %}
+      </button>
+    </div>
+  </div>
+
+  {% if not profile_complete %}
+  <div class="alert alert-info">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+    <div>
+      <strong data-en="Your profile is incomplete." data-ar="بروفايلك مش مكتمل.">Your profile is incomplete.</strong>
+      <span data-en="HR teams cannot find you until you complete your profile." data-ar="الـ HR مش هيلاقيك لحد ما تكمل بروفايلك.">HR teams cannot find you until you complete your profile.</span>
+      <a href="{{ url_for('candidate_profile_page') }}" class="btn btn-primary" style="margin-left:14px;" data-en="Complete profile →" data-ar="إكمال البروفايل ←">Complete profile →</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="stat-grid">
+    <div class="stat-cell">
+      <div class="stat-num">{{ nominations | selectattr('status','equalto','sent') | list | length }}</div>
+      <div class="stat-label" data-en="Pending nominations" data-ar="ترشيحات في الانتظار">Pending nominations</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">{{ nominations | selectattr('status','equalto','accepted') | list | length }}</div>
+      <div class="stat-label" data-en="Accepted" data-ar="مقبولة">Accepted</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">{{ functions | length }}</div>
+      <div class="stat-label" data-en="Functions on profile" data-ar="مهام في البروفايل">Functions on profile</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num">{{ candidate.years_total or 0 }}<span style="font-size:18px;color:var(--text-dim);">y</span></div>
+      <div class="stat-label" data-en="Years in brokerage" data-ar="سنوات في السمسرة">Years in brokerage</div>
+    </div>
+  </div>
+
+  <h2 style="font-family:var(--display);font-size:28px;font-weight:500;letter-spacing:-0.02em;margin-bottom:18px;" data-en="Your nominations" data-ar="ترشيحاتك">Your nominations</h2>
+
+  {% if nominations %}
+  <div style="display:grid;gap:14px;">
+    {% for nom in nominations %}
+    <div class="card card-tight" style="display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;">
+      <div>
+        <div class="flex gap-3 mb-2" style="align-items:center;">
+          <span class="code text-sm">{{ nom.required_department or '—' }}</span>
+          <span class="badge {% if nom.status == 'sent' %}badge-accent{% elif nom.status == 'accepted' %}badge-green{% elif nom.status == 'declined' %}badge-neutral{% else %}badge-neutral{% endif %}">
+            {{ nom.status }}
+          </span>
+        </div>
+        <div style="font-family:var(--display);font-size:18px;font-weight:500;margin-bottom:4px;">
+          {{ nom.role_summary or 'Brokerage firm nomination' }}
+        </div>
+        <div class="text-sm text-dim">
+          <span data-en="Required experience:" data-ar="الخبرة المطلوبة:">Required experience:</span>
+          <strong>{{ nom.required_years or 0 }}+ years</strong>
+          <span style="margin:0 8px;">·</span>
+          <span data-en="Sent:" data-ar="أُرسل:">Sent:</span>
+          <span class="text-mono">{{ nom.created_at[:10] }}</span>
+          {% if nom.status == 'sent' %}
+          <span style="margin:0 8px;">·</span>
+          <span class="text-accent" data-en="Awaiting your response" data-ar="في انتظار ردك">Awaiting your response</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="flex gap-2">
+        {% if nom.status == 'sent' %}
+        <button class="btn btn-ghost btn-danger" onclick="respondNom({{ nom.id }}, 'decline')" data-en="Decline" data-ar="رفض">Decline</button>
+        <button class="btn btn-primary" onclick="respondNom({{ nom.id }}, 'accept')" data-en="Accept →" data-ar="موافقة ←">Accept →</button>
+        {% elif nom.status == 'accepted' %}
+        <span class="text-sm text-dim" data-en="Firm will contact you" data-ar="الشركة هتتواصل معاك">Firm will contact you</span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="empty">
+    <div class="empty-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20 13V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v7"/><path d="M22 19H2"/><path d="M16 9l-4 4-4-4"/></svg>
+    </div>
+    <div class="empty-title" data-en="No nominations yet" data-ar="مفيش ترشيحات لسه">No nominations yet</div>
+    <div class="text-dim" data-en="Complete your profile and stay available — firms will find you." data-ar="كمّل بروفايلك واتاحتك متاح — الشركات هتلاقيك.">
+      Complete your profile and stay available — firms will find you.
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+async function toggleAvail() {
+  const badge = document.getElementById('avail-badge');
+  const isAvail = badge.classList.contains('badge-green');
+  const newStatus = isAvail ? 'not_available' : 'available';
+
+  const r = await api('/api/candidate/availability', { method: 'POST', body: { availability: newStatus } });
+  if (r.ok) {
+    location.reload();
+  } else {
+    toast('Failed to update availability', 'error');
+  }
+}
+
+async function respondNom(id, action) {
+  const r = await api('/api/nomination/' + id + '/respond', { method: 'POST', body: { action } });
+  if (r.ok) {
+    toast(action === 'accept' ? 'Nomination accepted' : 'Nomination declined', 'success');
+    setTimeout(() => location.reload(), 800);
+  } else {
+    toast('Failed to respond', 'error');
+  }
+}
+</script>
+
+{% endblock %}

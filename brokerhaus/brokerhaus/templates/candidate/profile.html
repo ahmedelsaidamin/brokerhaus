@@ -1,0 +1,373 @@
+{% extends "base.html" %}
+{% block title %}My profile — Brokerhaus{% endblock %}
+
+{% block content %}
+<div class="container">
+
+  <div class="page-head">
+    <div class="page-eyebrow">
+      <span class="code">{{ candidate.code }}</span>
+      <span style="margin:0 10px;">·</span>
+      <span data-en="My profile" data-ar="بروفايلي">My profile</span>
+    </div>
+    <h1 class="page-title"
+        data-en-html='Tell us <em>what you actually do</em>.'
+        data-ar-html='قولنا <em>إنت بتعمل إيه فعلياً</em>.'>
+      Tell us <em>what you actually do</em>.
+    </h1>
+    <p class="page-sub" data-en="Pick the department, check the functions you handle, set your level, and write a few lines about your day. You can add functions from more than one department." data-ar="اختار الإدارة، حدّد المهام اللي بتعملها، حدّد درجتك، واكتب كام سطر عن شغلك اليومي. تقدر تضيف مهام من أكتر من إدارة.">
+      Pick the department, check the functions you handle, set your level, and write a few lines about your day. You can add functions from more than one department.
+    </p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 320px;gap:32px;align-items:start;">
+
+    <!-- Main form -->
+    <form id="profile-form" onsubmit="return saveProfile(event)">
+
+      <!-- STEP 1 - Primary department -->
+      <div class="card mb-4">
+        <div class="form-row">
+          <label class="form-label" data-en="Step 1 — Your primary department" data-ar="الخطوة 1 — إدارتك الأساسية">Step 1 — Your primary department</label>
+          <div class="form-help" data-en="The department you primarily work in." data-ar="الإدارة اللي بتشتغل فيها أساساً.">The department you primarily work in.</div>
+          <select class="form-select" name="primary_department" id="primary_department" required>
+            <option value="">— Select —</option>
+            {% for dept in departments %}
+            <option value="{{ dept.id }}" {% if candidate.primary_department == dept.id %}selected{% endif %}>{{ dept.name_en }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- STEP 2 - Functions (multiple departments) -->
+      <div class="card mb-4">
+        <div class="form-row" style="margin-bottom:0;">
+          <label class="form-label" data-en="Step 2 — Functions you perform" data-ar="الخطوة 2 — المهام اللي بتقوم بها">Step 2 — Functions you perform</label>
+          <div class="form-help" data-en="Tick everything you really do. You can add functions from more than one department." data-ar="حدّد كل اللي بتعمله فعلياً. تقدر تضيف مهام من أكتر من إدارة.">Tick everything you really do. You can add functions from more than one department.</div>
+        </div>
+
+        <!-- Department picker for adding functions -->
+        <div style="display:flex;gap:10px;margin-bottom:18px;align-items:end;">
+          <div style="flex:1;">
+            <label class="form-label-mono" data-en="Add functions from..." data-ar="ضيف مهام من...">Add functions from...</label>
+            <select class="form-select" id="dept-picker">
+              {% for dept in departments %}
+              <option value="{{ dept.id }}">{{ dept.name_en }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <button type="button" class="btn btn-primary" onclick="loadDeptFunctions()" data-en="Load" data-ar="عرض">Load</button>
+        </div>
+
+        <!-- Functions display per department -->
+        <div id="functions-container">
+          <!-- Functions blocks added dynamically -->
+        </div>
+
+        <div id="selected-count" style="margin-top:14px;padding:10px 14px;background:var(--bg);border:1px dashed var(--border-strong);border-radius:6px;font-size:13px;color:var(--text-dim);">
+          <span class="code text-accent" id="sel-num">0</span>
+          <span data-en="functions selected" data-ar="مهمة محددة">functions selected</span>
+        </div>
+      </div>
+
+      <!-- STEP 3 - Seniority -->
+      <div class="card mb-4">
+        <div class="form-row">
+          <label class="form-label" data-en="Step 3 — Your seniority level" data-ar="الخطوة 3 — درجتك الوظيفية">Step 3 — Your seniority level</label>
+          <select class="form-select" name="seniority" required>
+            <option value="">— Select —</option>
+            {% for level in seniority_levels %}
+            <option value="{{ level }}" {% if candidate.seniority == level %}selected{% endif %}>{{ level }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label-mono" data-en="Total years of experience in brokerage" data-ar="إجمالي سنوات الخبرة في السمسرة">Total years of experience in brokerage</label>
+          <input class="form-input" type="number" name="years_total" min="0" max="50" value="{{ candidate.years_total or 0 }}" required>
+        </div>
+      </div>
+
+      <!-- STEP 4 - Real title + company -->
+      <div class="card mb-4">
+        <div class="form-row">
+          <label class="form-label" data-en="Step 4 — Your real job title" data-ar="الخطوة 4 — مسماك الفعلي">Step 4 — Your real job title</label>
+          <div class="form-help" data-en="As written in your contract or business card — even if it's unusual." data-ar="كما هو مكتوب في عقدك أو كارت العمل — حتى لو كان غريب.">As written in your contract or business card — even if it's unusual.</div>
+          <input class="form-input" type="text" name="company_job_title" value="{{ candidate.company_job_title or '' }}" placeholder="e.g. Senior Back Office Officer · Dealer · Account Manager" required>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label-mono" data-en="Current company (private)" data-ar="الشركة الحالية (خصوصي)">Current company (private)</label>
+          <div class="form-help" data-en="Hidden from HR until you accept a nomination." data-ar="مخفي عن الـ HR لحد ما توافق على ترشيح.">Hidden from HR until you accept a nomination.</div>
+          <input class="form-input" type="text" name="current_company" value="{{ candidate.current_company or '' }}" placeholder="e.g. Pharos Securities Brokerage">
+        </div>
+      </div>
+
+      <!-- STEP 5 - Work description -->
+      <div class="card mb-4">
+        <div class="form-row">
+          <label class="form-label" data-en="Step 5 — Describe your day" data-ar="الخطوة 5 — اشرح يوم شغلك">Step 5 — Describe your day</label>
+          <div class="form-help" data-en="Systems you use, reports you prepare, who you coordinate with." data-ar="الأنظمة اللي بتستخدمها، التقارير اللي بتعملها، مين بتنسّق معاه.">Systems you use, reports you prepare, who you coordinate with.</div>
+          <textarea class="form-textarea" name="work_description" rows="5" placeholder="I review executed trades daily, follow up on settlements with the clearing house...">{{ candidate.work_description or '' }}</textarea>
+        </div>
+      </div>
+
+      <!-- STEP 6 - Availability -->
+      <div class="card mb-4">
+        <div class="form-row">
+          <label class="form-label" data-en="Step 6 — Availability" data-ar="الخطوة 6 — حالة التوفّر">Step 6 — Availability</label>
+          <div class="form-help" data-en="'Not Available' hides you completely — no one can see you or send you nominations." data-ar="&laquo;غير متاح&raquo; بتُخفيك تماماً — مفيش حد يقدر يشوفك أو يبعتلك ترشيحات.">'Not Available' hides you completely — no one can see you or send you nominations.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <label class="avail-opt {% if candidate.availability == 'available' or not candidate.availability %}selected-green{% endif %}">
+              <input type="radio" name="availability" value="available" {% if candidate.availability == 'available' or not candidate.availability %}checked{% endif %} style="display:none;">
+              <div style="font-family:var(--display);font-size:17px;font-weight:500;margin-bottom:4px;" data-en="Available for Work" data-ar="متاح للعمل">Available for Work</div>
+              <div style="font-size:12px;color:var(--text-dim);" data-en="HR can find you and send nominations" data-ar="الـ HR يقدر يلاقيك ويبعتلك ترشيحات">HR can find you and send nominations</div>
+            </label>
+            <label class="avail-opt {% if candidate.availability == 'not_available' %}selected-red{% endif %}">
+              <input type="radio" name="availability" value="not_available" {% if candidate.availability == 'not_available' %}checked{% endif %} style="display:none;">
+              <div style="font-family:var(--display);font-size:17px;font-weight:500;margin-bottom:4px;" data-en="Not Available" data-ar="غير متاح">Not Available</div>
+              <div style="font-size:12px;color:var(--text-dim);" data-en="Hidden from search completely" data-ar="مخفي تماماً من البحث">Hidden from search completely</div>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div id="save-error" class="alert alert-danger hidden"></div>
+      <div id="save-success" class="alert alert-success hidden">
+        <span data-en="Profile saved successfully." data-ar="البروفايل اتحفظ بنجاح.">Profile saved successfully.</span>
+      </div>
+
+      <div class="flex gap-3" style="justify-content:flex-end;">
+        <a href="{{ url_for('candidate_dashboard') }}" class="btn btn-ghost" data-en="Cancel" data-ar="إلغاء">Cancel</a>
+        <button type="submit" class="btn btn-primary btn-large" id="save-btn" data-en="Save profile →" data-ar="حفظ البروفايل ←">Save profile →</button>
+      </div>
+    </form>
+
+    <!-- Sidebar tips -->
+    <aside class="card" style="position:sticky;top:90px;">
+      <div style="font-family:var(--mono);font-size:10px;letter-spacing:0.2em;color:var(--accent);text-transform:uppercase;margin-bottom:14px;">
+        <span data-en="Why this matters" data-ar="ليه ده مهم">Why this matters</span>
+      </div>
+      <div style="font-size:13px;color:var(--text-dim);line-height:1.7;">
+        <p style="margin-bottom:14px;color:var(--text);">
+          <strong data-en="Match on work, not titles." data-ar="مطابقة على الشغل، مش المسمى.">Match on work, not titles.</strong>
+        </p>
+        <p style="margin-bottom:14px;" data-en="HR teams don't search for 'Senior Officer'. They search for specific work — settlements, margin calls, KYC, etc. The more functions you check, the more precisely we can match you." data-ar="الـ HR ما بيدوّروش على &laquo;Senior Officer&raquo;. بيدوّروا على شغل معيّن — settlements، margin calls، KYC، إلخ. كل ما تحدّد مهام أكتر، كل ما المطابقة تبقى أدق.">
+          HR teams don't search for "Senior Officer". They search for specific work — settlements, margin calls, KYC, etc. The more functions you check, the more precisely we can match you.
+        </p>
+        <p data-en="Most candidates check 8–15 functions across 1–2 departments." data-ar="معظم الموظفين بيحددوا 8–15 مهمة عبر 1–2 إدارة.">
+          Most candidates check 8–15 functions across 1–2 departments.
+        </p>
+      </div>
+    </aside>
+
+  </div>
+</div>
+
+<style>
+.avail-opt {
+  padding: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg);
+  display: block;
+}
+.avail-opt:hover { border-color: var(--text-dim); }
+.avail-opt.selected-green {
+  border-color: var(--accent);
+  background: rgba(212, 255, 58, 0.06);
+}
+.avail-opt.selected-red {
+  border-color: var(--red);
+  background: rgba(255, 92, 92, 0.06);
+}
+
+.dept-block {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 18px;
+  margin-bottom: 14px;
+  background: var(--bg);
+}
+.dept-block-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.dept-block-title {
+  font-family: var(--display);
+  font-size: 17px;
+  font-weight: 500;
+}
+.dept-block-remove {
+  background: none;
+  border: none;
+  color: var(--text-mute);
+  cursor: pointer;
+  font-size: 12px;
+  transition: color 0.2s;
+}
+.dept-block-remove:hover { color: var(--red); }
+
+@media (max-width: 900px) {
+  .container > div[style*="grid-template-columns"] { grid-template-columns: 1fr !important; }
+  aside.card { position: static !important; }
+}
+</style>
+
+<script>
+// Existing functions from server
+const existingFunctions = {{ selected_functions | tojson }};
+const allDepartments = {{ departments | tojson }};
+
+// State: map of dept_id -> Set of function names
+const selectedByDept = {};
+existingFunctions.forEach(f => {
+  if (!selectedByDept[f.department_id]) selectedByDept[f.department_id] = new Set();
+  selectedByDept[f.department_id].add(f.function_name);
+});
+
+function renderDeptBlock(deptId) {
+  const dept = allDepartments.find(d => d.id === deptId);
+  if (!dept) return;
+
+  const container = document.getElementById('functions-container');
+  const existing = container.querySelector(`[data-dept="${deptId}"]`);
+  if (existing) return; // already loaded
+
+  const block = document.createElement('div');
+  block.className = 'dept-block';
+  block.dataset.dept = deptId;
+
+  const selected = selectedByDept[deptId] || new Set();
+
+  const items = dept.functions.map(fn => {
+    const isChecked = selected.has(fn);
+    return `<div class="check-item ${isChecked ? 'checked' : ''}" onclick="toggleFn('${deptId}', this)" data-fn="${fn.replace(/"/g, '&quot;')}">
+      <div class="check-box"></div>
+      <div>${fn}</div>
+    </div>`;
+  }).join('');
+
+  block.innerHTML = `
+    <div class="dept-block-head">
+      <div class="dept-block-title">${dept.name_en}</div>
+      <button type="button" class="dept-block-remove" onclick="removeDeptBlock('${deptId}')">× Remove</button>
+    </div>
+    <div class="check-grid">${items}</div>
+  `;
+  container.appendChild(block);
+  updateCount();
+}
+
+function toggleFn(deptId, el) {
+  const fnName = el.dataset.fn;
+  if (!selectedByDept[deptId]) selectedByDept[deptId] = new Set();
+  if (selectedByDept[deptId].has(fnName)) {
+    selectedByDept[deptId].delete(fnName);
+    el.classList.remove('checked');
+  } else {
+    selectedByDept[deptId].add(fnName);
+    el.classList.add('checked');
+  }
+  updateCount();
+}
+
+function removeDeptBlock(deptId) {
+  const block = document.querySelector(`[data-dept="${deptId}"]`);
+  if (block) block.remove();
+  delete selectedByDept[deptId];
+  updateCount();
+}
+
+function updateCount() {
+  let total = 0;
+  Object.values(selectedByDept).forEach(s => total += s.size);
+  document.getElementById('sel-num').textContent = total;
+}
+
+function loadDeptFunctions() {
+  const deptId = document.getElementById('dept-picker').value;
+  renderDeptBlock(deptId);
+}
+
+// Auto-load primary department + any departments with selected functions
+document.addEventListener('DOMContentLoaded', () => {
+  // Load primary department first
+  const primary = document.getElementById('primary_department').value;
+  if (primary) renderDeptBlock(primary);
+  // Then any other departments with already-selected functions
+  Object.keys(selectedByDept).forEach(deptId => {
+    if (deptId !== primary) renderDeptBlock(deptId);
+  });
+});
+
+// Update on primary department change
+document.getElementById('primary_department').addEventListener('change', (e) => {
+  if (e.target.value) renderDeptBlock(e.target.value);
+});
+
+// Availability radio styling
+document.querySelectorAll('input[name="availability"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.querySelectorAll('.avail-opt').forEach(o => {
+      o.classList.remove('selected-green', 'selected-red');
+    });
+    const opt = r.closest('.avail-opt');
+    opt.classList.add(r.value === 'available' ? 'selected-green' : 'selected-red');
+  });
+});
+
+async function saveProfile(e) {
+  e.preventDefault();
+  const form = document.getElementById('profile-form');
+  const fd = new FormData(form);
+
+  // Build functions list
+  const functions = [];
+  Object.entries(selectedByDept).forEach(([deptId, fns]) => {
+    fns.forEach(fn => functions.push({ department_id: deptId, function_name: fn, years_in_function: 0 }));
+  });
+
+  if (functions.length === 0) {
+    document.getElementById('save-error').textContent = 'Please select at least one function.';
+    document.getElementById('save-error').classList.remove('hidden');
+    return false;
+  }
+
+  const data = {
+    primary_department: fd.get('primary_department'),
+    seniority: fd.get('seniority'),
+    company_job_title: fd.get('company_job_title'),
+    current_company: fd.get('current_company'),
+    work_description: fd.get('work_description'),
+    years_total: parseInt(fd.get('years_total') || 0),
+    availability: fd.get('availability'),
+    functions,
+  };
+
+  const btn = document.getElementById('save-btn');
+  btn.disabled = true;
+  document.getElementById('save-error').classList.add('hidden');
+  document.getElementById('save-success').classList.add('hidden');
+
+  const r = await api('/api/candidate/profile', { method: 'POST', body: data });
+
+  if (r.ok && r.data && r.data.ok) {
+    document.getElementById('save-success').classList.remove('hidden');
+    setTimeout(() => { window.location.href = '{{ url_for("candidate_dashboard") }}'; }, 800);
+  } else {
+    document.getElementById('save-error').textContent = 'Failed to save. Please try again.';
+    document.getElementById('save-error').classList.remove('hidden');
+    btn.disabled = false;
+  }
+  return false;
+}
+</script>
+
+{% endblock %}
